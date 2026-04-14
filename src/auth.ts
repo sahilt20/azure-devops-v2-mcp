@@ -78,6 +78,21 @@ class OAuthAuthenticator {
 function createAuthenticator(type: string, tenantId?: string): () => Promise<string> {
   logger.debug(`Creating authenticator of type '${type}' with tenantId='${tenantId ?? "undefined"}'`);
   switch (type) {
+    case "pat":
+      logger.debug(`Authenticator: Using PAT authentication (AZURE_DEVOPS_PAT)`);
+      return async () => {
+        logger.debug(`pat: Reading token from AZURE_DEVOPS_PAT environment variable`);
+        const token = process.env["AZURE_DEVOPS_PAT"];
+        if (!token) {
+          logger.error(`pat: AZURE_DEVOPS_PAT environment variable is not set or empty`);
+          throw new Error(
+            "Environment variable 'AZURE_DEVOPS_PAT' is not set. Please configure your PAT in VS Code MCP settings (input: ado_pat)."
+          );
+        }
+        logger.debug(`pat: Successfully retrieved PAT token`);
+        return token;
+      };
+
     case "envvar":
       logger.debug(`Authenticator: Using environment variable authentication (ADO_MCP_AUTH_TOKEN)`);
       // Read token from fixed environment variable

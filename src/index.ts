@@ -31,10 +31,15 @@ const argv = yargs(hideBin(process.argv))
   .version(packageVersion)
   .command("$0 <organization> [options]", "Azure DevOps MCP Server", (yargs) => {
     yargs.positional("organization", {
-      describe: "Azure DevOps organization name",
+      describe: "Azure DevOps organization name or full org URL (e.g. https://dev.azure.com/contoso)",
       type: "string",
       demandOption: true,
     });
+  })
+  .option("project", {
+    alias: "p",
+    describe: "Default Azure DevOps project name (used as fallback when tools don't specify one)",
+    type: "string",
   })
   .option("domains", {
     alias: "d",
@@ -47,7 +52,7 @@ const argv = yargs(hideBin(process.argv))
     alias: "a",
     describe: "Type of authentication to use",
     type: "string",
-    choices: ["interactive", "azcli", "env", "envvar"],
+    choices: ["interactive", "azcli", "env", "envvar", "pat"],
     default: defaultAuthenticationType,
   })
   .option("tenant", {
@@ -55,11 +60,22 @@ const argv = yargs(hideBin(process.argv))
     describe: "Azure tenant ID (optional, applied when using 'interactive' and 'azcli' type of authentication)",
     type: "string",
   })
+  .option("readonly", {
+    alias: "r",
+    describe: "Run in read-only mode — disables all write/mutating tools",
+    type: "boolean",
+    default: false,
+  })
   .help()
   .parseSync();
 
-export const orgName = argv.organization as string;
-const orgUrl = "https://dev.azure.com/" + orgName;
+// Support full org URL (https://dev.azure.com/contoso) or just org name (contoso)
+const orgArg = argv.organization as string;
+export const orgUrl = orgArg.startsWith("http") ? orgArg.replace(/\/$/, "") : `https://dev.azure.com/${orgArg}`;
+export const orgName = orgUrl.replace(/^https:\/\/[^/]+\//, "").split("/")[0];
+
+export const defaultProject = argv.project as string | undefined;
+export const isReadOnly = argv.readonly as boolean;
 
 const domainsManager = new DomainsManager(argv.domains);
 export const enabledDomains = domainsManager.getEnabledDomains();
@@ -81,10 +97,12 @@ async function main() {
   logger.info("Starting Azure DevOps MCP Server", {
     organization: orgName,
     organizationUrl: orgUrl,
+    defaultProject: defaultProject ?? "(not set — will prompt per tool)",
     authentication: argv.authentication,
     tenant: argv.tenant,
     domains: argv.domains,
     enabledDomains: Array.from(enabledDomains),
+    readOnly: isReadOnly,
     version: packageVersion,
     isCodespace: isGitHubCodespaceEnv(),
   });
@@ -109,7 +127,7 @@ async function main() {
   // removing prompts untill further notice
   // configurePrompts(server);
 
-  configureAllTools(server, authenticator, getAzureDevOpsClient(authenticator, userAgentComposer), () => userAgentComposer.userAgent, enabledDomains);
+  configureAllTools(server, authenticator, getAzureDevOpsClient(authenticator, userAgentComposer), () => userAgentComposer.userAgent, enabledDomains, defaultProject, isReadOnly);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

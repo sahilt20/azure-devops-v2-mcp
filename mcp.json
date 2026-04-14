@@ -1,19 +1,40 @@
 {
-  "inputs": [
-    {
-      "id": "ado_org",
-      "type": "promptString",
-      "description": "Azure DevOps organization name  (e.g. 'contoso')"
-    }
-  ],
-  "servers": {
-    "ado": {
-      "type": "stdio",
-      "command": "mcp-server-azuredevops",
-      "args": ["${input:ado_org}"],
-      "env": {
-        "LOG_LEVEL": "debug"
-      }
-    }
-  }
+	"servers": {
+		"ado": {
+			"type": "stdio",
+			"command": "node",
+			"args": [
+				"dist/index.js",
+				"${input:ado_org}",
+				"--authentication",
+				"envvar"
+			],
+			"env": {
+				"ADO_MCP_AUTH_TOKEN": "${input:ado_pat}"
+			}
+		}
+	},
+	"inputs": [
+		{
+			"id": "ado_org",
+			"type": "promptString",
+			"description": "Azure DevOps organization name (e.g. contoso)"
+		},
+		{
+			"id": "ado_pat",
+			"type": "promptString",
+			"description": "Azure DevOps Personal Access Token (PAT) — stored securely",
+			"password": true
+		},
+		{
+			"id": "ado_org_url",
+			"type": "promptString",
+			"description": "Azure DevOps Organization URL (e.g. https://dev.azure.com/contoso)"
+		},
+		{
+			"id": "ado_project",
+			"type": "promptString",
+			"description": "Default Azure DevOps Project name (e.g. MyProject)"
+		}
+	]
 }

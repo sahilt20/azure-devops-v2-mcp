@@ -11,6 +11,8 @@ export enum Domain {
   PIPELINES = "pipelines",
   CORE = "core",
   REPOSITORIES = "repositories",
+  RELEASES = "releases",
+  ANALYTICS = "analytics",
   SEARCH = "search",
   TEST_PLANS = "test-plans",
   WIKI = "wiki",
